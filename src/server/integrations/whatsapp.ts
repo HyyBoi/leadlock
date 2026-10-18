@@ -59,6 +59,16 @@ export const whatsapp = {
     const r = (await graph(cfg, "GET", `/${encodeURIComponent(cfg.phoneNumberId)}?fields=display_phone_number,verified_name`)) as { display_phone_number?: string; verified_name?: string };
     return { display: r.display_phone_number ?? "", name: r.verified_name ?? "" };
   },
+  /** Business-initiated approved template (works without the 24h window) — used by the connection self-test. */
+  async sendHelloTemplate(cfg: WhatsAppConfig, toPhone: string) {
+    const r = (await graph(cfg, "POST", `/${encodeURIComponent(cfg.phoneNumberId)}/messages`, {
+      messaging_product: "whatsapp",
+      to: toWa(toPhone),
+      type: "template",
+      template: { name: "hello_world", language: { code: "en_US" } },
+    })) as { messages?: { id: string }[] };
+    return r.messages?.[0]?.id ?? "";
+  },
   async send(cfg: WhatsAppConfig, toPhone: string, text: string) {
     const r = (await graph(cfg, "POST", `/${encodeURIComponent(cfg.phoneNumberId)}/messages`, {
       messaging_product: "whatsapp",

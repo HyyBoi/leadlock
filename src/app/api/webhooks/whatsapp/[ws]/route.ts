@@ -11,11 +11,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ws: 
   const { ws } = await params;
   const integ = await getIntegration<WhatsAppConfig>(ws, "WHATSAPP");
   const sp = req.nextUrl.searchParams;
-  if (integ && sp.get("hub.mode") === "subscribe" && same(sp.get("hub.verify_token") ?? "", integ.config.verifyToken)) {
+  if (integ && sp.get("hub.mode") === "subscribe" && same((sp.get("hub.verify_token") ?? "").trim(), integ.config.verifyToken)) {
     await recordEvent({ workspaceId: ws, provider: "WHATSAPP", direction: "IN", kind: "webhook.verify", result: "OK" });
     return new NextResponse(sp.get("hub.challenge") ?? "", { status: 200, headers: { "content-type": "text/plain" } });
   }
-  if (integ) await recordEvent({ workspaceId: ws, provider: "WHATSAPP", direction: "IN", kind: "webhook.verify", result: "REJECTED", detail: "Verify token mismatch" });
+  if (integ) await recordEvent({ workspaceId: ws, provider: "WHATSAPP", direction: "IN", kind: "webhook.verify", result: "REJECTED", detail: `Verify token mismatch (received ${(sp.get("hub.verify_token") ?? "").length} chars, expected ${integ.config.verifyToken.length}). Copy-paste the token, don't type it.` });
   return new NextResponse("Forbidden", { status: 403 });
 }
 
@@ -40,7 +40,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ws:
     for (const ch of entry.changes ?? []) {
       const v = ch.value;
       if (!v) continue;
-      if (v.metadata?.phone_number_id && v.metadata.phone_number_id !== integ.config.phoneNumberId) continue; // not this workspace's number
+      if (v.metadata?.phone_number_id && v.metadata.phone_number_id !== integ.config.phoneNumberId) {
+        // e.g. Meta dashboard "Test" sample payloads use a fake number: proves signature + delivery work.
+        await recordEvent({ workspaceId: ws, provider: "WHATSAPP", direction: "IN", kind: "webhook", result: "OK", reference: v.metadata.phone_number_id, detail: "Signed webhook received for a different phone number ID (Meta test sample) — ignored" });
+        continue;
+      }
       for (const m of v.messages ?? []) {
         const body = m.text?.body ?? m.button?.text ?? `[${m.type} message]`;
         const name = v.contacts?.find((c) => c.wa_id === m.from)?.profile?.name;
