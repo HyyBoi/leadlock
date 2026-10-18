@@ -1,6 +1,6 @@
 # LeadLock — every lead has exactly one accountable owner
 
-A multi-tenant business platform for 5–30 person sales teams: customizable CRM, guaranteed lead ownership with automatic escalation, and real integrations (WhatsApp via Twilio, Stripe test-mode payments, Google Calendar, Telegram alerts), with every action audited.
+A multi-tenant business platform for 5–30 person sales teams: customizable CRM, guaranteed lead ownership with automatic escalation, and real integrations (WhatsApp via Meta's official WhatsApp Cloud API, Stripe test-mode payments, Google Calendar, Slack alerts), with every action audited.
 
 ## Stack
 - **Next.js 15** (App Router, TypeScript) — UI + REST API in one service
@@ -15,7 +15,7 @@ src/app/api/**         HTTP layer: auth, validation (zod), permission checks via
 src/server/leads.ts    business rules: assignment, acknowledgement, escalation, recovery
 src/server/crm.ts      CRM rules: custom fields, required stage fields, value masking, filters
 src/server/payments.ts payment rules (provider-agnostic; Stripe is one adapter)
-src/server/integrations/{twilio,stripe,google,telegram}.ts  provider adapters
+src/server/integrations/{whatsapp,stripe,google,slack}.ts  provider adapters
 src/server/worker.ts   timers + outbox with retry/backoff
 src/db/schema.ts       data model
 ```
@@ -35,7 +35,7 @@ Demo logins (password `demo12345`): `owner@sunrise.demo`, `manager@sunrise.demo`
 2. Render → New → Web Service → this repo. Build `npm ci && npm run build`, start `npm start` (runs migrations first). Env: `DATABASE_URL`, `APP_URL` (the onrender.com URL), `ENCRYPTION_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NODE_VERSION=22`.
 3. `npm run seed` once against the Neon URL (optional demo data).
 4. cron-job.org → GET `$APP_URL/api/health` every 5 minutes.
-5. In the app → Integrations: connect Twilio, Stripe (webhook endpoint is created automatically), Telegram (webhook set automatically). Paste the shown Twilio webhook URL into the Twilio sandbox settings.
+5. In the app → Integrations: connect WhatsApp (Meta), Stripe (webhook endpoint is created automatically) and Slack. Paste the shown WhatsApp Callback URL + Verify token into Meta → WhatsApp → Configuration and subscribe to `messages`. Each employee links Slack on My profile.
 6. Google Cloud: OAuth client (Web) with redirect URI `$APP_URL/api/integrations/google/callback`; add demo Gmail accounts as test users.
 
 ## Requirements map — where to verify each item
@@ -56,15 +56,15 @@ Demo logins (password `demo12345`): `owner@sunrise.demo`, `manager@sunrise.demo`
 | F3.1 | `/f/<slug>` web form, inbound WhatsApp, Leads → manual entry; source badge on every lead |
 | F3.2 | Team / My profile → Available, Busy, On leave, Offline |
 | F3.3 | Pipelines & rules → round-robin among Available employees under “max open leads” |
-| F3.4 | Live countdown on Leads, lead page, contact page; Telegram + in-app banner on assignment |
+| F3.4 | Live countdown on Leads, lead page, contact page; Slack DM + in-app banner on assignment |
 | F3.5 | Escalation chain editor: any number of levels (next available / backup / manager) with seconds per level |
 | F3.6 | Set someone On leave → unacknowledged leads move instantly; acknowledged stay + flagged in Recovery (policy shown on Team page) |
 | F3.7 | Recovery queue with reason badges |
 | F3.8 | Per-workspace advisory lock + version check + deadline re-check in `escalateLead()` |
-| F3.9 / I4 | Telegram alert to new owner with lead, source, reason, link; per-user linking via deep link; failures retried and listed on Integrations |
+| F3.9 / I4 | Slack DM to the new owner with lead, source, reason and an “Open lead” button; per-user routing by Slack email (My profile); failures retried and listed on Integrations |
 | F4.x | Audit log page (filters: type, user, date); Postgres trigger rejects UPDATE/DELETE/TRUNCATE on `audit_logs` |
 | F5.x | Dashboard: 8 figures per Section 7 definitions, drill-down links, personal view for Users, customize (saved per user) |
-| I1.x | Twilio webhook `/api/webhooks/twilio/<ws>` (signature-verified, idempotent on MessageSid), status callbacks, outbox retries, retry button, opt-out (incl. customer “STOP”) |
+| I1.x | Meta WhatsApp Cloud API webhook `/api/webhooks/whatsapp/<ws>` (X-Hub-Signature-256 verified on raw body, idempotent on message id), sent/delivered/read/failed statuses (never downgraded), outbox retries, retry button, opt-out (incl. customer “STOP”). Twilio is unavailable in Pakistan; the adapter in `whatsapp.ts` is the only provider-specific code |
 | I2.x | Payment link from opportunity (optionally sent on WhatsApp); Stripe webhook verified on raw body, de-duplicated by event id; paid / failed / expired / refunded; collected vs projected on Payments page |
 | I3.x | My profile → Connect Google (OAuth, offline refresh); busy check + “Proceed anyway”; reschedule/cancel update Google; times stored UTC + IANA zone |
 | I5.x | Integrations page: status, last worked, recent errors, limits, sync history with filters; secrets AES-256-GCM encrypted, masked |

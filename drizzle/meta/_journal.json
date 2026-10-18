@@ -15,6 +15,13 @@
       "when": 1792308469418,
       "tag": "0001_audit_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792310329661,
+      "tag": "0002_whatsapp_slack",
+      "breakpoints": true
     }
   ]
 }

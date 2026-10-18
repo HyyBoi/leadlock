@@ -35,12 +35,10 @@ export default async function Profile({ searchParams }: { searchParams: Promise<
           </div>
         )}
       </Card>
-      <Card title="Telegram alerts">
-        <p className="mb-2 text-sm">{me.telegramChatId ? "✅ Linked — escalation alerts come to your Telegram." : "Not linked. Click below, then press Start in Telegram."}</p>
-        <div className="flex flex-wrap gap-2">
-          <ActionButton url="/api/me/telegram" label={me.telegramChatId ? "Re-link Telegram" : "Link Telegram"} variant="primary" openResultKey="url" success="Telegram opened — press Start there." />
-          {me.telegramChatId && <ActionButton url="/api/me/telegram" method="DELETE" label="Unlink" />}
-        </div>
+      <Card title="Slack alerts">
+        <p className="mb-2 text-sm">{me.slackUserId ? `✅ Linked to ${me.slackEmail}. Lead assignments and escalations are sent to you as a Slack DM.` : "Not linked. Enter the email you use in the team's Slack workspace — you'll get a test DM."}</p>
+        <ApiForm action="/api/me/slack" inline submitLabel={me.slackUserId ? "Re-link" : "Link Slack"} success="Linked — check Slack for a test message." fields={[{ name: "email", label: "Slack email", type: "email", required: true, defaultValue: me.slackEmail ?? "" }]} />
+        {me.slackUserId && <div className="mt-2"><ActionButton url="/api/me/slack" method="DELETE" label="Unlink" /></div>}
       </Card>
     </div>
   );

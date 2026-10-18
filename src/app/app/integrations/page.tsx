@@ -3,7 +3,8 @@ import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requirePage, membersOf } from "@/lib/page";
 import { ApiForm, ActionButton, Card } from "@/components/ui";
-import { PROVIDER_INFO, ProviderName, appUrl } from "@/server/integrations/registry";
+import { PROVIDER_INFO, ProviderName, appUrl, getIntegration } from "@/server/integrations/registry";
+import { WhatsAppConfig } from "@/server/integrations/whatsapp";
 import { googleConfigured, googleRedirectUri } from "@/server/integrations/google";
 import { fmt, ago } from "@/lib/time";
 
@@ -21,19 +22,21 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
     orderBy: desc(schema.integrationEvents.createdAt), limit: 100,
   });
   const errorsFor = (p: string) => events.filter((e) => e.provider === p && ["ERROR", "REJECTED"].includes(e.result)).slice(0, 3);
+  const wa = await getIntegration<WhatsAppConfig>(ctx.workspaceId, "WHATSAPP");
+  const waVerify = wa?.config.verifyToken;
   const failedAlerts = await db.query.outbox.findMany({ where: and(eq(schema.outbox.workspaceId, ctx.workspaceId), eq(schema.outbox.status, "FAILED")), orderBy: desc(schema.outbox.createdAt), limit: 10 });
   const forms: Record<string, React.ReactNode> = {
-    TWILIO: <ApiForm action="/api/integrations/twilio" submitLabel="Connect / update" success="WhatsApp connected." fields={[
-      { name: "accountSid", label: "Account SID", required: true, placeholder: "AC…" },
-      { name: "authToken", label: "Auth token", type: "password", required: true },
-      { name: "from", label: "Sandbox WhatsApp number", required: true, defaultValue: "+14155238886" },
+    WHATSAPP: <ApiForm action="/api/integrations/whatsapp" submitLabel="Connect / update" success="WhatsApp connected. Now set the webhook in Meta (steps above)." fields={[
+      { name: "phoneNumberId", label: "Phone number ID (Meta → WhatsApp → API Setup)", required: true },
+      { name: "accessToken", label: "Access token", type: "password", required: true },
+      { name: "appSecret", label: "App secret (App settings → Basic)", type: "password", required: true },
     ]} />,
     STRIPE: <ApiForm action="/api/integrations/stripe" submitLabel="Connect / update" success="Stripe connected — webhook endpoint created automatically." fields={[
       { name: "secretKey", label: "Secret key (test mode)", type: "password", required: true, placeholder: "sk_test_…" },
       ...(appUrl().startsWith("https://") ? [] : [{ name: "webhookSecret", label: "Webhook signing secret (local only)", type: "password" as const, placeholder: "whsec_… from stripe listen" }]),
     ]} />,
-    TELEGRAM: <ApiForm action="/api/integrations/telegram" submitLabel="Connect / update" success="Telegram bot connected. Each employee now links their chat from My profile." fields={[
-      { name: "botToken", label: "Bot token from @BotFather", type: "password", required: true },
+    SLACK: <ApiForm action="/api/integrations/slack" submitLabel="Connect / update" success="Slack connected. Each employee now links their Slack email on My profile." fields={[
+      { name: "botToken", label: "Bot User OAuth Token (xoxb-…)", type: "password", required: true },
     ]} />,
   };
   return (
@@ -41,7 +44,7 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
       <h1 className="text-2xl font-bold">Integrations</h1>
       <p className="text-sm text-[var(--muted)]">Credentials belong to this workspace only, are stored encrypted on the server and are never shown in full. If one provider is down, everything else keeps working.</p>
       <div className="grid gap-4 xl:grid-cols-2">
-        {(["TWILIO", "STRIPE", "TELEGRAM"] as const).map((p) => {
+        {(["WHATSAPP", "STRIPE", "SLACK"] as const).map((p) => {
           const r = rows.find((x) => x.provider === p);
           const info = PROVIDER_INFO[p];
           return (
@@ -50,9 +53,9 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
                 <dt className="text-[var(--muted)]">Last worked</dt><dd>{r?.lastSuccessAt ? `${fmt(r.lastSuccessAt, ctx.timezone)} (${ago(r.lastSuccessAt)})` : "never"}</dd>
                 {Object.entries(r?.hints ?? {}).map(([k, v]) => <Fragment key={k}><dt className="text-[var(--muted)]">{k}</dt><dd><code>{v}</code></dd></Fragment>)}
-                {p === "TWILIO" && <><dt className="text-[var(--muted)]">Webhook URL</dt><dd className="break-all"><code>{appUrl()}/api/webhooks/twilio/{ctx.workspaceId}</code></dd></>}
+                {p === "WHATSAPP" && <><dt className="text-[var(--muted)]">Callback URL</dt><dd className="break-all"><code>{appUrl()}/api/webhooks/whatsapp/{ctx.workspaceId}</code></dd>{waVerify && <><dt className="text-[var(--muted)]">Verify token</dt><dd className="break-all"><code>{waVerify}</code></dd></>}</>}
               </dl>
-              {p === "TWILIO" && <p className="mt-1 text-xs text-[var(--muted)]">Paste the webhook URL into Twilio Console → Messaging → Try it out → WhatsApp sandbox settings → “When a message comes in” (POST).</p>}
+              {p === "WHATSAPP" && <p className="mt-1 text-xs text-[var(--muted)]">After connecting: Meta app → WhatsApp → Configuration → Webhook → Edit → paste the Callback URL and Verify token → Verify and save → Webhook fields → Subscribe to <strong>messages</strong>.</p>}
               {errorsFor(p).length > 0 && <div className="mt-2 grid gap-1"><p className="text-sm font-medium text-[var(--danger)]">Recent errors</p>{errorsFor(p).map((e) => <p key={e.id} className="text-xs text-[var(--danger)]">{ago(e.createdAt)} · {e.kind}: {e.detail}</p>)}</div>}
               <details className="mt-2"><summary className="cursor-pointer text-sm link">What it can and can&apos;t do</summary>
                 <ul className="mt-1 list-disc pl-5 text-sm">{info.can.map((c) => <li key={c}>✓ {c}</li>)}{info.cannot.map((c) => <li key={c}>✗ {c}</li>)}</ul>
@@ -76,7 +79,7 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
         </Card>
       )}
       <Card title="Synchronization history" actions={<form className="flex flex-wrap gap-2" method="get">
-        <select name="provider" defaultValue={sp.provider ?? ""} className="input w-auto" aria-label="Provider"><option value="">All providers</option>{["TWILIO", "STRIPE", "GOOGLE", "TELEGRAM"].map((p) => <option key={p}>{p}</option>)}</select>
+        <select name="provider" defaultValue={sp.provider ?? ""} className="input w-auto" aria-label="Provider"><option value="">All providers</option>{["WHATSAPP", "STRIPE", "GOOGLE", "SLACK"].map((p) => <option key={p}>{p}</option>)}</select>
         <select name="result" defaultValue={sp.result ?? ""} className="input w-auto" aria-label="Result"><option value="">All results</option>{["OK", "ERROR", "REJECTED", "DUPLICATE", "RETRY"].map((p) => <option key={p}>{p}</option>)}</select>
         <button className="btn btn-ghost">Filter</button></form>}>
         <div className="scroll-x">

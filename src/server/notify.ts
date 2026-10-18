@@ -16,11 +16,12 @@ export async function enqueueAlert(
   if (!membershipId) return;
   const lead = await tx.query.leads.findFirst({ where: eq(schema.leads.id, leadId), with: undefined });
   const contact = lead ? await tx.query.contacts.findFirst({ where: eq(schema.contacts.id, lead.contactId) }) : null;
+  const url = `${appUrl()}/app/leads/${leadId}`;
   const text =
-    `${KIND_LABEL[kind]}\n` +
-    `Lead: ${contact?.name ?? "Unknown"}${contact?.phone ? ` (${contact.phone})` : ""}\n` +
-    `Source: ${lead?.source.replace("_", " ").toLowerCase()}\n` +
-    `Reason: ${reason}\n` +
-    `Open: ${appUrl()}/app/leads/${leadId}`;
-  await tx.insert(schema.outbox).values({ workspaceId, kind: "TELEGRAM_ALERT", payload: { membershipId, leadId, text } });
+    `*${KIND_LABEL[kind]}*\n` +
+    `*Lead:* ${contact?.name ?? "Unknown"}${contact?.phone ? ` (${contact.phone})` : ""}\n` +
+    `*Source:* ${lead?.source.replace("_", " ").toLowerCase()}\n` +
+    `*Reason:* ${reason}\n` +
+    `<${url}|Open the lead>`;
+  await tx.insert(schema.outbox).values({ workspaceId, kind: "ALERT", payload: { membershipId, leadId, text, url } });
 }

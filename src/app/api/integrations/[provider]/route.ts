@@ -4,10 +4,9 @@ import { db } from "@/db";
 import { mask, randomToken } from "@/lib/crypto";
 import { audit } from "@/server/audit";
 import { appUrl, getIntegration, ProviderError, recordEvent, saveIntegration } from "@/server/integrations/registry";
-import { twilioCheck, TwilioConfig } from "@/server/integrations/twilio";
+import { whatsapp, WhatsAppConfig } from "@/server/integrations/whatsapp";
 import { stripeProvider, StripeConfig } from "@/server/integrations/stripe";
-import { telegram, TelegramConfig } from "@/server/integrations/telegram";
-import { normalizePhone } from "@/lib/phone";
+import { slack } from "@/server/integrations/slack";
 
 const isPublic = () => appUrl().startsWith("https://");
 
@@ -16,11 +15,13 @@ export const POST = api<{ provider: string }>("integrations.manage", async ({ re
   const provider = params.provider.toUpperCase();
   const actor = { id: ctx.membershipId, label: ctx.name };
   try {
-    if (provider === "TWILIO") {
-      const b = await body(req, z.object({ accountSid: z.string().trim().regex(/^AC[0-9a-f]{32}$/i, "must look like AC…"), authToken: z.string().trim().min(16), from: z.string().trim().min(8) }));
-      const cfg: TwilioConfig = { accountSid: b.accountSid, authToken: b.authToken, from: normalizePhone(b.from.replace(/^whatsapp:/, "")) };
-      await twilioCheck(cfg);
-      await saveIntegration(db, ctx.workspaceId, "TWILIO", cfg, { accountSid: mask(cfg.accountSid), authToken: mask(cfg.authToken), from: cfg.from });
+    if (provider === "WHATSAPP") {
+      const b = await body(req, z.object({ phoneNumberId: z.string().trim().regex(/^\d{6,}$/, "must be the numeric Phone number ID"), accessToken: z.string().trim().min(20), appSecret: z.string().trim().regex(/^[0-9a-f]{32}$/i, "must be the 32-character App secret") }));
+      const old = await getIntegration<WhatsAppConfig>(ctx.workspaceId, "WHATSAPP");
+      const cfg: WhatsAppConfig = { phoneNumberId: b.phoneNumberId, accessToken: b.accessToken, appSecret: b.appSecret, verifyToken: old?.config.verifyToken ?? randomToken(18) };
+      const info = await whatsapp.check(cfg);
+      cfg.displayNumber = info.display;
+      await saveIntegration(db, ctx.workspaceId, "WHATSAPP", cfg, { number: `${info.display} (${info.name})`, phoneNumberId: cfg.phoneNumberId, accessToken: mask(cfg.accessToken), appSecret: mask(cfg.appSecret) });
     } else if (provider === "STRIPE") {
       const b = await body(req, z.object({ secretKey: z.string().trim().min(10), webhookSecret: z.string().trim().optional() }));
       await stripeProvider.verifyKey(b.secretKey);
@@ -35,32 +36,28 @@ export const POST = api<{ provider: string }>("integrations.manage", async ({ re
         cfg = { secretKey: b.secretKey, webhookSecret: b.webhookSecret };
       }
       await saveIntegration(db, ctx.workspaceId, "STRIPE", cfg, { secretKey: mask(cfg.secretKey), webhookSecret: mask(cfg.webhookSecret), webhook: cfg.webhookEndpointId ?? "manual" });
-    } else if (provider === "TELEGRAM") {
-      const b = await body(req, z.object({ botToken: z.string().trim().regex(/^\d+:[\w-]{30,}$/, "must look like 123456:ABC…") }));
-      const me = await telegram.getMe(b.botToken);
-      const secret = randomToken(24);
-      if (isPublic()) await telegram.setWebhook(b.botToken, `${appUrl()}/api/webhooks/telegram/${ctx.workspaceId}`, secret);
-      const cfg: TelegramConfig = { botToken: b.botToken, botUsername: me.username, webhookSecret: secret };
-      await saveIntegration(db, ctx.workspaceId, "TELEGRAM", cfg, { botToken: mask(b.botToken), bot: `@${me.username}` });
+    } else if (provider === "SLACK") {
+      const b = await body(req, z.object({ botToken: z.string().trim().startsWith("xoxb-", "must be the Bot User OAuth Token (xoxb-…)") }));
+      const me = await slack.check(b.botToken);
+      await saveIntegration(db, ctx.workspaceId, "SLACK", { botToken: b.botToken, team: me.team }, { workspace: me.team, bot: me.bot, botToken: mask(b.botToken) });
     } else throw new HttpError(404, "Unknown integration.");
   } catch (e) {
     if (e instanceof ProviderError) {
-      await recordEvent({ workspaceId: ctx.workspaceId, provider: provider as "TWILIO", direction: "OUT", kind: "connect", result: "ERROR", detail: e.message });
+      await recordEvent({ workspaceId: ctx.workspaceId, provider: provider as "WHATSAPP", direction: "OUT", kind: "connect", result: "ERROR", detail: e.message });
       throw new HttpError(400, `Couldn't connect: ${e.message}`);
     }
     throw e;
   }
-  await recordEvent({ workspaceId: ctx.workspaceId, provider: provider as "TWILIO", direction: "OUT", kind: "connect", result: "OK" });
+  await recordEvent({ workspaceId: ctx.workspaceId, provider: provider as "WHATSAPP", direction: "OUT", kind: "connect", result: "OK" });
   await audit(db, ctx.workspaceId, actor, "integration.connected", { type: "integration", id: provider }, null, { provider });
   return { ok: true };
 });
 
 export const DELETE = api<{ provider: string }>("integrations.manage", async ({ ctx, params }) => {
-  const provider = params.provider.toUpperCase() as "TWILIO" | "STRIPE" | "TELEGRAM";
-  if (!["TWILIO", "STRIPE", "TELEGRAM"].includes(provider)) throw new HttpError(404, "Unknown integration.");
+  const provider = params.provider.toUpperCase() as "WHATSAPP" | "STRIPE" | "SLACK";
+  if (!["WHATSAPP", "STRIPE", "SLACK"].includes(provider)) throw new HttpError(404, "Unknown integration.");
   const cur = await getIntegration(ctx.workspaceId, provider);
   if (cur && provider === "STRIPE") await stripeProvider.deleteWebhook(cur.config as unknown as StripeConfig);
-  if (cur && provider === "TELEGRAM") await telegram.deleteWebhook((cur.config as unknown as TelegramConfig).botToken).catch(() => {});
   await saveIntegration(db, ctx.workspaceId, provider, null, {});
   await audit(db, ctx.workspaceId, { id: ctx.membershipId, label: ctx.name }, "integration.disconnected", { type: "integration", id: provider }, { provider, connected: !!cur }, { connected: false });
   return { ok: true };

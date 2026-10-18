@@ -135,7 +135,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
           <Card title="WhatsApp conversation" id="conversation">
             {!seeConv ? <p className="text-sm">This conversation belongs to {owner?.name}. You need the “see every lead and conversation” permission to view it.</p> : (
               <div className="grid gap-3">
-                <p className="text-xs text-[var(--muted)]">Assigned employee: {owner?.name ?? "—"} · {PROVIDER_INFO.TWILIO.cannot[0]}.</p>
+                <p className="text-xs text-[var(--muted)]">Assigned employee: {owner?.name ?? "—"} · {PROVIDER_INFO.WHATSAPP.cannot[0]}.</p>
                 <ol className="grid max-h-[420px] gap-2 overflow-y-auto" aria-label="Messages">
                   {msgs.map((m) => (
                     <li key={m.id} className={`max-w-[85%] rounded-lg p-2 text-sm ${m.direction === "IN" ? "bg-[var(--bg)]" : "ml-auto bg-[var(--info-bg)]"}`}>

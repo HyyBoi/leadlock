@@ -14,7 +14,7 @@ export async function requirePage(perm?: Permission) {
 
 export async function membersOf(workspaceId: string) {
   return db
-    .select({ id: schema.memberships.id, name: schema.users.name, email: schema.users.email, level: schema.memberships.level, availability: schema.memberships.availability, receivesLeads: schema.memberships.receivesLeads, active: schema.memberships.active, roleId: schema.memberships.roleId, telegramChatId: schema.memberships.telegramChatId, timezone: schema.memberships.timezone })
+    .select({ id: schema.memberships.id, name: schema.users.name, email: schema.users.email, level: schema.memberships.level, availability: schema.memberships.availability, receivesLeads: schema.memberships.receivesLeads, active: schema.memberships.active, roleId: schema.memberships.roleId, slackUserId: schema.memberships.slackUserId, timezone: schema.memberships.timezone })
     .from(schema.memberships)
     .innerJoin(schema.users, eq(schema.users.id, schema.memberships.userId))
     .where(eq(schema.memberships.workspaceId, workspaceId))

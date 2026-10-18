@@ -2,17 +2,17 @@ import { and, eq } from "drizzle-orm";
 import { db, schema, Tx } from "@/db";
 import { decrypt, encrypt } from "@/lib/crypto";
 
-export type ProviderName = "TWILIO" | "STRIPE" | "GOOGLE" | "TELEGRAM";
+export type ProviderName = "WHATSAPP" | "STRIPE" | "GOOGLE" | "SLACK";
 
 export const PROVIDER_INFO: Record<ProviderName, { title: string; purpose: string; can: string[]; cannot: string[] }> = {
-  TWILIO: {
-    title: "WhatsApp (Twilio Sandbox)",
+  WHATSAPP: {
+    title: "WhatsApp (Meta Cloud API, test number)",
     purpose: "Talk to customers and capture leads from incoming WhatsApp messages.",
     can: ["Receive messages and create leads/contacts", "Reply from the platform", "Track sent / delivered / read / failed"],
     cannot: [
-      "Reach phones that have not joined the sandbox (send the join phrase first)",
-      "Keep a phone joined for more than 3 days (rejoin after that)",
-      "Send faster than 1 message every 3 seconds or use custom templates",
+      "Message phones that are not on the test recipient list (max 5, added in Meta → API Setup)",
+      "Send free-form replies more than 24 hours after the customer's last message",
+      "Keep working after the temporary access token expires (24 h) — paste a new token here",
     ],
   },
   STRIPE: {
@@ -35,13 +35,14 @@ export const PROVIDER_INFO: Record<ProviderName, { title: string; purpose: strin
       "Book employees who have not connected a calendar",
     ],
   },
-  TELEGRAM: {
-    title: "Escalation alerts (Telegram bot)",
+  SLACK: {
+    title: "Escalation alerts (Slack)",
     purpose: "Alert employees outside the app when a lead is assigned or escalated to them.",
-    can: ["Deliver alerts within seconds", "Route each alert to the employee's own Telegram chat", "Retry failed alerts automatically"],
+    can: ["Deliver a direct message within seconds", "Route each alert to the employee's own Slack user", "Retry failed alerts automatically"],
     cannot: [
-      "Message an employee who has not pressed Start on the bot (use 'Link Telegram' on your profile)",
-      "Send more than about 30 messages per second",
+      "Alert employees who haven't linked their Slack email on My profile",
+      "Reach people who are not members of the connected Slack workspace",
+      "Send more than about 1 message per second per conversation (Slack rate limits)",
     ],
   },
 };

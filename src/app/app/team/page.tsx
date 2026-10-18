@@ -21,7 +21,7 @@ export default async function Team() {
       <p className="text-sm text-[var(--muted)]">{ACKED_LEAD_POLICY}</p>
       <div className="card scroll-x">
         <table className="table">
-          <thead><tr><th>Member</th><th>Level / role</th><th>Availability</th><th>Calendar</th><th>Telegram</th>{manage && <th>Manage</th>}</tr></thead>
+          <thead><tr><th>Member</th><th>Level / role</th><th>Availability</th><th>Calendar</th><th>Slack alerts</th>{manage && <th>Manage</th>}</tr></thead>
           <tbody>
             {members.map((m) => {
               const cal = conns.find((c) => c.membershipId === m.id);
@@ -32,7 +32,7 @@ export default async function Team() {
                   <td>{m.level}<div className="text-xs">{roles.find((r) => r.id === m.roleId)?.name ?? "—"}</div></td>
                   <td className="min-w-44">{(setOthers || m.id === ctx.membershipId) ? <ApiForm action={`/api/members/${m.id}/availability`} inline submitLabel="Set" success="Updated." fields={[{ name: "status", label: AVAIL_LABEL[m.availability], type: "select", required: true, defaultValue: m.availability, options: STATUS_OPTS }]} /> : AVAIL_LABEL[m.availability]}</td>
                   <td>{cal ? (cal.status === "CONNECTED" ? <span className="badge badge-ok">✓ connected</span> : <span className="badge badge-danger">needs reconnect</span>) : <span className="badge">not connected</span>}</td>
-                  <td>{m.telegramChatId ? <span className="badge badge-ok">✓ linked</span> : <span className="badge">not linked</span>}</td>
+                  <td>{m.slackUserId ? <span className="badge badge-ok">✓ linked</span> : <span className="badge">not linked</span>}</td>
                   {manage && <td className="min-w-56">{editable ? (
                     <details><summary className="cursor-pointer link text-sm">Edit</summary>
                       <ApiForm action={`/api/members/${m.id}`} method="PATCH" submitLabel="Save" success="Member updated." fields={[

@@ -3,7 +3,6 @@ import { db, schema } from "@/db";
 import { activity } from "./audit";
 import { createLead, lockWorkspace, touchContactLeads } from "./leads";
 import { defaultPipeline } from "./crm";
-import { fromWhatsApp } from "./integrations/twilio";
 import { recordEvent } from "./integrations/registry";
 
 const { contacts, conversations, messages, opportunities, outbox } = schema;
@@ -16,10 +15,11 @@ async function getOrCreateConversation(tx: typeof db | Parameters<Parameters<typ
 }
 
 /** I1.1 / I1.5 / I1.8: inbound WhatsApp. Idempotent on MessageSid; unknown numbers become contact + opportunity + lead. */
-export async function handleInbound(workspaceId: string, p: Record<string, string>) {
-  const sid = p.MessageSid;
-  const phone = fromWhatsApp(p.From ?? "");
-  const body = p.Body ?? "";
+export type InboundMsg = { sid: string; phone: string; body: string; name?: string };
+export async function handleInbound(workspaceId: string, p: InboundMsg) {
+  const sid = p.sid;
+  const phone = p.phone;
+  const body = p.body;
   return db.transaction(async (tx) => {
     await lockWorkspace(tx, workspaceId);
     const dup = await tx.query.messages.findFirst({ where: eq(messages.providerSid, sid), columns: { id: true } });
@@ -30,7 +30,7 @@ export async function handleInbound(workspaceId: string, p: Record<string, strin
     if (!contact) {
       [contact] = await tx
         .insert(contacts)
-        .values({ workspaceId, name: p.ProfileName || phone, phone, tags: ["whatsapp"] })
+        .values({ workspaceId, name: p.name || phone, phone, tags: ["whatsapp"] })
         .returning();
       const pl = await defaultPipeline(tx, workspaceId);
       const [opp] = await tx
@@ -87,18 +87,15 @@ export async function retryMessage(workspaceId: string, messageId: string) {
 
 const RANK: Record<string, number> = { QUEUED: 0, SENT: 1, DELIVERED: 2, READ: 3, FAILED: 4 };
 
-/** I1.4: status callbacks. Never downgrade (e.g. a late 'sent' after 'delivered'). */
-export async function handleStatus(workspaceId: string, p: Record<string, string>) {
-  const map: Record<string, "QUEUED" | "SENT" | "DELIVERED" | "READ" | "FAILED"> = {
-    accepted: "QUEUED", queued: "QUEUED", sending: "QUEUED", sent: "SENT", delivered: "DELIVERED", read: "READ", failed: "FAILED", undelivered: "FAILED",
-  };
-  const next = map[p.MessageStatus ?? ""];
+/** I1.4: delivery status webhooks. Never downgrade (e.g. a late 'sent' after 'delivered'). */
+export async function handleStatus(workspaceId: string, p: { sid: string; status: string; error?: string | null }) {
+  const map: Record<string, "QUEUED" | "SENT" | "DELIVERED" | "READ" | "FAILED"> = { sent: "SENT", delivered: "DELIVERED", read: "READ", failed: "FAILED" };
+  const next = map[p.status];
   if (!next) return;
-  const m = await db.query.messages.findFirst({ where: and(eq(messages.providerSid, p.MessageSid), eq(messages.workspaceId, workspaceId)) });
+  const m = await db.query.messages.findFirst({ where: and(eq(messages.providerSid, p.sid), eq(messages.workspaceId, workspaceId)) });
   if (!m) return;
   if ((RANK[next] ?? 0) <= (RANK[m.status] ?? 0) && next !== "FAILED") return;
-  const error = next === "FAILED" ? `${p.ErrorCode ? `Error ${p.ErrorCode}: ` : ""}${p.ErrorMessage ?? (p.ErrorCode === "63015" ? "This phone has not joined the WhatsApp sandbox (or its 3-day session expired)." : "Twilio could not deliver the message.")}` : null;
-  await db.update(messages).set({ status: next, error, updatedAt: new Date() }).where(eq(messages.id, m.id));
+  await db.update(messages).set({ status: next, error: next === "FAILED" ? p.error ?? "WhatsApp could not deliver the message." : null, updatedAt: new Date() }).where(eq(messages.id, m.id));
 }
 
 export { sql };

@@ -1,9 +1,9 @@
 import { eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { escalateDueLeads } from "./leads";
-import { appUrl, getIntegration, markError, markOk, ProviderError, recordEvent } from "./integrations/registry";
-import { telegram, TelegramConfig } from "./integrations/telegram";
-import { twilioSend, TwilioConfig } from "./integrations/twilio";
+import { getIntegration, markError, markOk, ProviderError, recordEvent } from "./integrations/registry";
+import { slack, SlackConfig } from "./integrations/slack";
+import { whatsapp, WhatsAppConfig } from "./integrations/whatsapp";
 
 type OutboxRow = { id: string; workspace_id: string; kind: string; payload: Record<string, string>; attempts: number; max_attempts: number };
 
@@ -11,14 +11,14 @@ class Permanent extends Error {}
 
 async function deliver(row: OutboxRow) {
   const ws = row.workspace_id;
-  if (row.kind === "TELEGRAM_ALERT") {
+  if (row.kind === "ALERT") {
     const m = await db.query.memberships.findFirst({ where: eq(schema.memberships.id, row.payload.membershipId) });
-    const integ = await getIntegration<TelegramConfig>(ws, "TELEGRAM");
-    if (!integ) throw new Permanent("Telegram is not connected for this workspace.");
-    if (!m?.telegramChatId) throw new Permanent("Employee has not linked Telegram (Profile → Link Telegram).");
-    await telegram.send(integ.config.botToken, m.telegramChatId, row.payload.text);
-    await recordEvent({ workspaceId: ws, provider: "TELEGRAM", direction: "OUT", kind: "alert.send", result: "OK", reference: row.payload.leadId });
-    await markOk(ws, "TELEGRAM");
+    const integ = await getIntegration<SlackConfig>(ws, "SLACK");
+    if (!integ) throw new Permanent("Slack alerts are not connected for this workspace.");
+    if (!m?.slackUserId) throw new Permanent("Employee has not linked Slack (My profile → Slack email).");
+    await slack.dm(integ.config.botToken, m.slackUserId, row.payload.text, row.payload.url);
+    await recordEvent({ workspaceId: ws, provider: "SLACK", direction: "OUT", kind: "alert.send", result: "OK", reference: row.payload.leadId });
+    await markOk(ws, "SLACK");
     return;
   }
   if (row.kind === "WHATSAPP_SEND") {
@@ -26,7 +26,7 @@ async function deliver(row: OutboxRow) {
     if (!msg || msg.status !== "QUEUED") return;
     const conv = (await db.query.conversations.findFirst({ where: eq(schema.conversations.id, msg.conversationId) }))!;
     const contact = (await db.query.contacts.findFirst({ where: eq(schema.contacts.id, conv.contactId) }))!;
-    const integ = await getIntegration<TwilioConfig>(ws, "TWILIO");
+    const integ = await getIntegration<WhatsAppConfig>(ws, "WHATSAPP");
     const fail = async (reason: string) => {
       await db.update(schema.messages).set({ status: "FAILED", error: reason, updatedAt: new Date() }).where(eq(schema.messages.id, msg.id));
     };
@@ -39,10 +39,11 @@ async function deliver(row: OutboxRow) {
       throw new Permanent("Contact opted out.");
     }
     try {
-      const r = await twilioSend(integ.config, contact.phone!, msg.body, `${appUrl()}/api/webhooks/twilio/${ws}/status`);
-      await db.update(schema.messages).set({ providerSid: r.sid, status: r.status === "sent" ? "SENT" : "QUEUED", error: null, updatedAt: new Date() }).where(eq(schema.messages.id, msg.id));
-      await recordEvent({ workspaceId: ws, provider: "TWILIO", direction: "OUT", kind: "message.send", result: "OK", reference: r.sid });
-      await markOk(ws, "TWILIO");
+      const r = await whatsapp.send(integ.config, contact.phone!, msg.body);
+      // Accepted by Meta = queued; the 'sent'/'delivered'/'read' webhooks advance it.
+      await db.update(schema.messages).set({ providerSid: r.sid, status: "QUEUED", error: null, updatedAt: new Date() }).where(eq(schema.messages.id, msg.id));
+      await recordEvent({ workspaceId: ws, provider: "WHATSAPP", direction: "OUT", kind: "message.send", result: "OK", reference: r.sid });
+      await markOk(ws, "WHATSAPP");
     } catch (e) {
       const err = e as ProviderError;
       const last = row.attempts >= row.max_attempts;
@@ -69,7 +70,7 @@ async function processOutbox() {
       const permanent = e instanceof Permanent || !(e as ProviderError).temporary;
       const exhausted = row.attempts >= row.max_attempts;
       const msg = (e as Error).message;
-      const provider = row.kind === "TELEGRAM_ALERT" ? "TELEGRAM" : "TWILIO";
+      const provider = row.kind === "ALERT" ? "SLACK" : "WHATSAPP";
       if (permanent || exhausted) {
         await db.update(schema.outbox).set({ status: "FAILED", lastError: msg }).where(eq(schema.outbox.id, row.id));
         await recordEvent({ workspaceId: row.workspace_id, provider, direction: "OUT", kind: row.kind.toLowerCase(), result: "ERROR", reference: row.payload.leadId ?? row.payload.messageId, detail: `${exhausted && !permanent ? `Gave up after ${row.attempts} attempts: ` : ""}${msg}` });

@@ -17,7 +17,7 @@ export const leadSourceEnum = pgEnum("lead_source", ["WEB_FORM", "WHATSAPP", "MA
 export const leadStatusEnum = pgEnum("lead_status", ["OPEN", "ACKNOWLEDGED", "CLOSED"]);
 export const msgStatusEnum = pgEnum("message_status", ["QUEUED", "SENT", "DELIVERED", "READ", "FAILED", "RECEIVED"]);
 export const payStatusEnum = pgEnum("payment_status", ["PENDING", "PAID", "FAILED", "EXPIRED", "REFUNDED", "PARTIALLY_REFUNDED"]);
-export const providerEnum = pgEnum("provider", ["TWILIO", "STRIPE", "GOOGLE", "TELEGRAM"]);
+export const providerEnum = pgEnum("provider", ["TWILIO", "STRIPE", "GOOGLE", "TELEGRAM", "WHATSAPP", "SLACK"]);
 export const integStatusEnum = pgEnum("integration_status", ["NOT_CONNECTED", "CONNECTED", "ERROR"]);
 export const outboxStatusEnum = pgEnum("outbox_status", ["PENDING", "DONE", "FAILED"]);
 
@@ -71,6 +71,8 @@ export const memberships = pgTable("memberships", {
   timezone: text("timezone").notNull().default("Asia/Karachi"),
   telegramChatId: text("telegram_chat_id"),
   telegramLinkToken: text("telegram_link_token").unique(),
+  slackUserId: text("slack_user_id"),
+  slackEmail: text("slack_email"),
   dashboardHidden: text("dashboard_hidden").array().notNull().default([]),
   active: boolean("active").notNull().default(true),
   createdAt: created(),
