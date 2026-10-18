@@ -19,3 +19,5 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      - key: SEED_DEMO
+        value: "1"

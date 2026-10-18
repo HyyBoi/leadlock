@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node scripts/migrate.mjs && next start",
+    "start": "node scripts/migrate.mjs && node scripts/maybe-seed.mjs && next start",
     "db:migrate": "node scripts/migrate.mjs",
     "db:generate": "drizzle-kit generate",
     "seed": "tsx scripts/seed.ts",
@@ -31,7 +31,6 @@
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.11",
     "tailwindcss": "^4",
-    "tsx": "^4.23.15",
     "typescript": "^5"
   },
   "engines": {
