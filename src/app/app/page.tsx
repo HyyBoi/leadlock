@@ -24,11 +24,11 @@ function Stat({ label, value, sub, href }: { label: string; value: React.ReactNo
   const inner = (
     <>
       <p className="text-sm text-[var(--muted)]">{label}</p>
-      <p className="mt-1 text-2xl font-bold">{value}</p>
+      <p className="mt-1 text-4xl font-bold">{value}</p>
       {sub && <p className="mt-1 text-xs text-[var(--muted)]">{sub}</p>}
     </>
   );
-  return href ? <Link href={href} className="card block hover:border-[var(--primary)]" aria-label={`${label}: open the list`}>{inner}<span className="mt-2 block text-xs link">View records →</span></Link> : <div className="card">{inner}</div>;
+  return href ? <Link href={href} className="card block hover:border-[var(--primary)]" aria-label={`${label}: open the list`}>{inner}<span className="mt-2 block text-xs link">View records</span></Link> : <div className="card">{inner}</div>;
 }
 
 export default async function Dashboard() {
@@ -45,7 +45,7 @@ export default async function Dashboard() {
       </header>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {show("newToday") && <Stat label="New leads today" value={d.newToday} href="/app/leads?scope=today" />}
-        {show("response") && <Stat label="Avg time to first response" value={dur(d.avgResponseSec)} sub={`assignment → first acknowledgement, ${d.respondedCount} leads`} />}
+        {show("response") && <Stat label="Avg time to first response" value={dur(d.avgResponseSec)} sub={`assignment first acknowledgement, ${d.respondedCount} leads`} />}
         {show("recovery") && <Stat label="Recovery queue" value={d.recovery} sub="overdue, escalated 2+ or idle" href="/app/recovery" />}
         {show("escalations") && <Stat label="Escalations (last 24h)" value={d.escalations24h} href="/app/audit?action=lead.escalated" />}
         {show("payments") && <Stat label="Collected this month" value={money(d.collectedMonth)} sub={`${d.collectedCount} webhook-confirmed payments, net of refunds · ${money(d.pendingPayments)} awaiting payment`} href="/app/payments?status=PAID" />}
@@ -74,7 +74,7 @@ export default async function Dashboard() {
             <ul className="mt-2 grid gap-1 text-sm">
               {d.team.map((t) => <li key={t.availability}>{AVAIL_LABEL[t.availability]}: <strong>{t.n}</strong></li>)}
             </ul>
-            <Link className="link mt-2 inline-block text-sm" href="/app/team">See who →</Link>
+            <Link className="link mt-2 inline-block text-sm" href="/app/team">See who</Link>
           </section>
         )}
         {show("appointments") && (
@@ -85,7 +85,7 @@ export default async function Dashboard() {
                 {d.upcoming.map((a) => <li key={a.id}><Link className="link" href={`/app/contacts/${a.contactId}`}>{a.title}</Link> — {fmt(a.startAt, ctx.timezone)}</li>)}
               </ul>
             ) : <p className="mt-2 text-sm text-[var(--muted)]">Nothing booked.</p>}
-            <Link className="link mt-2 inline-block text-sm" href="/app/appointments">All appointments →</Link>
+            <Link className="link mt-2 inline-block text-sm" href="/app/appointments">All appointments</Link>
           </section>
         )}
       </div>

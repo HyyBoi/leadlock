@@ -24,7 +24,7 @@ export default async function Settings() {
       <h1 className="text-2xl font-bold">Pipelines & rules</h1>
       <Card title="Lead assignment & escalation rules">
         {canRules ? <RulesEditor rule={{ ...rule, chain: rule.chain }} members={members.map((m) => ({ id: m.id, name: m.name }))} /> : (
-          <p className="text-sm">Window {rule.ackWindowSeconds}s · max {rule.maxOpenLeads} open leads per employee · chain: {rule.chain.map((c) => `${c.type.toLowerCase().replace("_", " ")} (${c.seconds}s)`).join(" → ")}. You need “manage assignment rules” to change these.</p>
+          <p className="text-sm">Window {rule.ackWindowSeconds}s · max {rule.maxOpenLeads} open leads per employee · chain: {rule.chain.map((c) => `${c.type.toLowerCase().replace("_", " ")} (${c.seconds}s)`).join(" ")}. You need “manage assignment rules” to change these.</p>
         )}
         <p className="mt-2 text-xs text-[var(--muted)]">Distribution: round-robin among employees who are Available and under the open-lead limit. Busy / On leave / Offline employees never receive new leads. If nobody is available the lead goes to the backup, then the manager, then the Owner, so it always has an owner.</p>
       </Card>
@@ -42,7 +42,7 @@ export default async function Settings() {
         const st = stages.filter((s) => s.pipelineId === p.id);
         const pdefs = defs.filter((d) => d.pipelineId === p.id);
         return (
-          <Card key={p.id} title={<>Pipeline: {p.name} <Link className="link text-sm font-normal" href={`/app/pipeline?p=${p.id}`}>open board →</Link></>}>
+          <Card key={p.id} title={<>Pipeline: {p.name} <Link className="link text-sm font-normal" href={`/app/pipeline?p=${p.id}`}>open board</Link></>}>
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="grid content-start gap-3">
                 <h3 className="font-semibold">Stages</h3>

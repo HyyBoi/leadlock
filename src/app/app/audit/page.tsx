@@ -27,14 +27,14 @@ export default async function Audit({ searchParams }: { searchParams: Promise<{ 
       </form>
       <div className="card scroll-x">
         <table className="table">
-          <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Before → After</th></tr></thead>
+          <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Before After</th></tr></thead>
           <tbody>{rows.map((r) => (
             <tr key={r.id}>
               <td className="whitespace-nowrap text-sm">{fmt(r.createdAt, ctx.timezone)}</td>
               <td>{r.actorLabel}</td>
               <td><code className="text-xs">{r.action}</code></td>
               <td className="text-xs">{r.targetType} <code>{r.targetId?.slice(0, 8)}</code></td>
-              <td className="text-xs break-all">{r.before ? <code className="text-[var(--danger)]">{JSON.stringify(r.before)}</code> : "—"} → {r.after ? <code className="text-[var(--ok)]">{JSON.stringify(r.after)}</code> : "—"}</td>
+              <td className="text-xs break-all">{r.before ? <code className="text-[var(--danger)]">{JSON.stringify(r.before)}</code> : "—"} {r.after ? <code className="text-[var(--ok)]">{JSON.stringify(r.after)}</code> : "—"}</td>
             </tr>))}
           </tbody>
         </table>

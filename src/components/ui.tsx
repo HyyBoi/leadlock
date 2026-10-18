@@ -181,7 +181,7 @@ export function StatusLine({ st }: { st: Status }) {
   if (st.kind === "idle" || st.kind === "loading") return <span aria-live="polite" className="sr-only">{st.kind === "loading" ? "Working" : ""}</span>;
   return (
     <p role={st.kind === "error" ? "alert" : "status"} className={`text-sm rounded-md p-2 ${st.kind === "error" ? "bg-[var(--danger-bg)] text-[var(--danger)]" : "bg-[var(--ok-bg)] text-[var(--ok)]"}`}>
-      {st.kind === "error" ? "⚠ " : "✓ "}
+      {st.kind === "error" ? "" : "✓ "}
       {st.msg}
     </p>
   );
@@ -230,12 +230,12 @@ export function Countdown({ deadline }: { deadline: string | null }) {
   if (!deadline) return null;
   if (now === null) return <span className="badge">…</span>;
   const left = Math.ceil((new Date(deadline).getTime() - now) / 1000);
-  if (left <= 0) return <span role="timer" className="badge badge-danger">⏱ Window expired — escalating</span>;
+  if (left <= 0) return <span role="timer" className="badge badge-danger">Window expired — escalating</span>;
   const m = Math.floor(left / 60);
   const s = left % 60;
   return (
     <span role="timer" aria-label={`${left} seconds left to acknowledge`} className={`badge ${left <= 10 ? "badge-danger" : left <= 30 ? "badge-warn" : "badge-info"}`}>
-      ⏱ {m}:{String(s).padStart(2, "0")} left
+      {m}:{String(s).padStart(2, "0")} left
     </span>
   );
 }
@@ -254,7 +254,7 @@ export function LiveRefresh() {
         if (r.ok) {
           const j = (await r.json()) as { sig: string; myOpen: number };
           if (sig.current !== null && j.sig !== sig.current) router.refresh();
-          if (mine.current !== null && j.myOpen > mine.current) setBanner(`🔔 ${j.myOpen - mine.current} new lead${j.myOpen - mine.current > 1 ? "s" : ""} assigned to you — acknowledge before the timer runs out.`);
+          if (mine.current !== null && j.myOpen > mine.current) setBanner(`${j.myOpen - mine.current} new lead${j.myOpen - mine.current > 1 ? "s" : ""} assigned to you — acknowledge before the timer runs out.`);
           sig.current = j.sig;
           mine.current = j.myOpen;
           document.title = j.myOpen ? `(${j.myOpen}) LeadLock` : "LeadLock";

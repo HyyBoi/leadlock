@@ -31,9 +31,9 @@ export const PATCH = api<{ id: string }>("crm.edit", async ({ req, ctx, params }
     .where(and(scope(ctx.workspaceId, params.id), eq(schema.opportunities.version, b.version))).returning();
   if (!u) throw new HttpError(409, "Someone else changed this opportunity while you were editing. Reload and try again.");
   const changes: string[] = [];
-  if (next.title !== o.title) changes.push(`title "${o.title}" → "${next.title}"`);
-  if (next.value !== o.value) changes.push(`value ${money(o.value, o.currency)} → ${money(next.value, next.currency)}`);
-  for (const d of defs) if (JSON.stringify(o.customValues[d.key]) !== JSON.stringify(next.customValues[d.key])) changes.push(`${d.name} "${o.customValues[d.key] ?? ""}" → "${next.customValues[d.key] ?? ""}"`);
+  if (next.title !== o.title) changes.push(`title "${o.title}" "${next.title}"`);
+  if (next.value !== o.value) changes.push(`value ${money(o.value, o.currency)} ${money(next.value, next.currency)}`);
+  for (const d of defs) if (JSON.stringify(o.customValues[d.key]) !== JSON.stringify(next.customValues[d.key])) changes.push(`${d.name} "${o.customValues[d.key] ?? ""}" "${next.customValues[d.key] ?? ""}"`);
   if (changes.length) {
     const actor = { id: ctx.membershipId, label: ctx.name };
     await activity(db, { workspaceId: ctx.workspaceId, type: "opportunity.edited", summary: `${ctx.name} changed ${changes.join("; ")}`, actor, contactId: o.contactId, opportunityId: o.id });

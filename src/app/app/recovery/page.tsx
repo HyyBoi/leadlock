@@ -30,13 +30,13 @@ export default async function Recovery() {
                 <td><Link className="link font-medium" href={`/app/leads/${l.id}`}>{l.contactName}</Link><div className="text-xs">{SOURCE_LABEL[l.source]}</div></td>
                 <td>{l.ownerName}</td>
                 <td><ul className="grid gap-1">{reasons.get(l.id)!.map((r) => <li key={r}><span className="badge badge-danger">{r}</span></li>)}</ul></td>
-                <td className="grid gap-1">{statusBadge(l)}{l.status === "OPEN" && <Countdown deadline={l.deadlineAt ? new Date(l.deadlineAt).toISOString() : null} />}</td>
+                <td className="grid justify-items-start gap-1">{statusBadge(l)}{l.status === "OPEN" && <Countdown deadline={l.deadlineAt ? new Date(l.deadlineAt).toISOString() : null} />}</td>
                 {members.length > 0 && <td className="min-w-48"><ApiForm action={`/api/leads/${l.id}/reassign`} submitLabel="Move" success="Reassigned." fields={[{ name: "membershipId", label: "To", type: "select", required: true, options: members.filter((m) => m.active && m.id !== l.ownerId && m.availability !== "ON_LEAVE" && m.availability !== "OFFLINE").map((m) => ({ value: m.id, label: `${m.name} ${AVAIL_LABEL[m.availability]}` })) }]} /></td>}
               </tr>
             ))}
           </tbody>
         </table>
-        {!rows.length && <p className="p-4 text-sm">🎉 Nothing to recover — every lead is being handled.</p>}
+        {!rows.length && <p className="p-4 text-sm">Nothing to recover — every lead is being handled.</p>}
       </div>
     </div>
   );

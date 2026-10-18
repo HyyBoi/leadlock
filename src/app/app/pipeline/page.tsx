@@ -30,7 +30,7 @@ export default async function Pipeline({ searchParams }: { searchParams: Promise
             return (
               <section key={s.id} className="card grid content-start gap-2" aria-label={`${s.name} stage`}>
                 <h2 className="font-semibold">{s.name} <span className="text-sm font-normal text-[var(--muted)]">· {cards.length}{ctx.perms.has("crm.view_value") && ` · ${money(total)}`}</span></h2>
-                {s.kind !== "OPEN" && <span className="badge">{s.kind === "WON" ? "🏆 Won stage" : "Lost stage"}</span>}
+                {s.kind !== "OPEN" && <span className="badge">{s.kind === "WON" ? "Won stage" : "Lost stage"}</span>}
                 {s.requiredFields.length > 0 && <p className="text-xs text-[var(--muted)]">Requires: {s.requiredFields.join(", ")}</p>}
                 {cards.map((o) => (
                   <article key={o.id} className="rounded-lg border border-[var(--border)] p-2 text-sm">

@@ -181,7 +181,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
               <details className="mt-3">
                 <summary className="cursor-pointer text-sm link">+ Book appointment</summary>
                 <p className="mt-2 text-xs text-[var(--muted)]">Only employees with a connected Google Calendar can be booked. Busy times are checked before booking.</p>
-                <ul className="text-xs">{members.filter((m) => m.active).map((m) => { const cn = connected.get(m.id); return <li key={m.id}>{m.name}: {cn ? (cn.status === "CONNECTED" ? `✅ calendar connected (${cn.googleEmail})` : "⚠ calendar needs reconnecting") : "❌ no calendar connected — can't be booked"}</li>; })}</ul>
+                <ul className="text-xs">{members.filter((m) => m.active).map((m) => { const cn = connected.get(m.id); return <li key={m.id}>{m.name}: {cn ? (cn.status === "CONNECTED" ? `✅ calendar connected (${cn.googleEmail})` : "calendar needs reconnecting") : "❌ no calendar connected — can't be booked"}</li>; })}</ul>
                 <ApiForm action="/api/appointments" submitLabel="Book on Google Calendar" success="Booked — it's on the employee's Google Calendar." extra={{ contactId: c.id }} className="mt-2 grid gap-3 sm:grid-cols-2" fields={[
                   { name: "title", label: "Title", required: true, defaultValue: `Meeting with ${c.name}` },
                   { name: "membershipId", label: "Employee", type: "select", required: true, defaultValue: c.ownerId ?? "", options: members.filter((m) => connected.get(m.id)?.status === "CONNECTED").map((m) => ({ value: m.id, label: m.name })) },

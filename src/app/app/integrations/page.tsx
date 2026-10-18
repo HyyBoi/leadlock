@@ -27,9 +27,9 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
   const failedAlerts = await db.query.outbox.findMany({ where: and(eq(schema.outbox.workspaceId, ctx.workspaceId), eq(schema.outbox.status, "FAILED")), orderBy: desc(schema.outbox.createdAt), limit: 10 });
   const forms: Record<string, React.ReactNode> = {
     WHATSAPP: <ApiForm action="/api/integrations/whatsapp" submitLabel="Connect / update" success="WhatsApp connected. Now set the webhook in Meta (steps above)." fields={[
-      { name: "phoneNumberId", label: "Phone number ID (Meta → WhatsApp → API Setup)", required: true },
+      { name: "phoneNumberId", label: "Phone number ID (Meta WhatsApp API Setup)", required: true },
       { name: "accessToken", label: "Access token", type: "password", required: true },
-      { name: "appSecret", label: "App secret (App settings → Basic)", type: "password", required: true },
+      { name: "appSecret", label: "App secret (App settings Basic)", type: "password", required: true },
     ]} />,
     STRIPE: <ApiForm action="/api/integrations/stripe" submitLabel="Connect / update" success="Stripe connected — webhook endpoint created automatically." fields={[
       { name: "secretKey", label: "Secret key (test mode)", type: "password", required: true, placeholder: "sk_test_…" },
@@ -56,7 +56,7 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
                 {p === "WHATSAPP" && <><dt className="text-[var(--muted)]">Callback URL</dt><dd className="break-all"><code>{appUrl()}/api/webhooks/whatsapp/{ctx.workspaceId}</code></dd>{waVerify && <><dt className="text-[var(--muted)]">Verify token</dt><dd className="break-all"><code>{waVerify}</code></dd></>}</>}
               </dl>
               {p === "WHATSAPP" && r?.status === "CONNECTED" && <div className="mt-2"><ApiForm action="/api/integrations/whatsapp/test" inline submitLabel="Send test message" success="Sent." resultKeys={[{ key: "result", label: "Result" }]} fields={[{ name: "to", label: "Test recipient phone", type: "tel", required: true, placeholder: "+923001234567" }]} /></div>}
-              {p === "WHATSAPP" && <p className="mt-1 text-xs text-[var(--muted)]">After connecting: Meta app → WhatsApp → Configuration → Webhook → Edit → paste the Callback URL and Verify token → Verify and save → Webhook fields → Subscribe to <strong>messages</strong>.</p>}
+              {p === "WHATSAPP" && <p className="mt-1 text-xs text-[var(--muted)]">After connecting: Meta app WhatsApp Configuration Webhook Edit paste the Callback URL and Verify token Verify and save Webhook fields Subscribe to <strong>messages</strong>.</p>}
               {errorsFor(p).length > 0 && <div className="mt-2 grid gap-1"><p className="text-sm font-medium text-[var(--danger)]">Recent errors</p>{errorsFor(p).map((e) => <p key={e.id} className="text-xs text-[var(--danger)]">{ago(e.createdAt)} · {e.kind}: {e.detail}</p>)}</div>}
               <details className="mt-2"><summary className="cursor-pointer text-sm link">What it can and can&apos;t do</summary>
                 <ul className="mt-1 list-disc pl-5 text-sm">{info.can.map((c) => <li key={c}>✓ {c}</li>)}{info.cannot.map((c) => <li key={c}>✗ {c}</li>)}</ul>
@@ -88,7 +88,7 @@ export default async function Integrations({ searchParams }: { searchParams: Pro
             <thead><tr><th>Time</th><th>Provider</th><th>Direction</th><th>Event</th><th>Result</th><th>Reference / detail</th></tr></thead>
             <tbody>{events.map((e) => (
               <tr key={e.id}>
-                <td className="whitespace-nowrap text-sm">{fmt(e.createdAt, ctx.timezone)}</td><td>{e.provider}</td><td>{e.direction === "IN" ? "⬇ inbound" : "⬆ outbound"}</td><td className="text-sm">{e.kind}</td>
+                <td className="whitespace-nowrap text-sm">{fmt(e.createdAt, ctx.timezone)}</td><td>{e.provider}</td><td>{e.direction === "IN" ? "inbound" : "⬆ outbound"}</td><td className="text-sm">{e.kind}</td>
                 <td><span className={e.result === "OK" ? "badge badge-ok" : e.result === "DUPLICATE" || e.result === "RETRY" ? "badge badge-warn" : "badge badge-danger"}>{e.result}</span></td>
                 <td className="text-xs break-all"><code>{e.reference}</code> {e.detail}</td>
               </tr>))}

@@ -21,5 +21,5 @@ export async function membersOf(workspaceId: string) {
     .orderBy(asc(schema.memberships.createdAt));
 }
 
-export const AVAIL_LABEL: Record<string, string> = { AVAILABLE: "🟢 Available", BUSY: "🟠 Busy", ON_LEAVE: "🌴 On leave", OFFLINE: "⚫ Offline" };
-export const SOURCE_LABEL: Record<string, string> = { WEB_FORM: "🌐 Web form", WHATSAPP: "💬 WhatsApp", MANUAL: "✍️ Manual" };
+export const AVAIL_LABEL: Record<string, string> = { AVAILABLE: "Available", BUSY: "Busy", ON_LEAVE: "On leave", OFFLINE: "Offline" };
+export const SOURCE_LABEL: Record<string, string> = { WEB_FORM: "Web form", WHATSAPP: "WhatsApp", MANUAL: "Manual" };

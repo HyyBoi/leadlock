@@ -39,7 +39,7 @@ export default async function Leads({ searchParams }: { searchParams: Promise<{ 
           <span>{total} leads · page {page} of {Math.max(1, Math.ceil(total / PAGE))}</span>
           <span className="flex gap-2">
             {page > 1 && <Link className="btn btn-ghost" href={q({ page: String(page - 1) })}>← Previous</Link>}
-            {page * PAGE < total && <Link className="btn btn-ghost" href={q({ page: String(page + 1) })}>Next →</Link>}
+            {page * PAGE < total && <Link className="btn btn-ghost" href={q({ page: String(page + 1) })}>Next</Link>}
           </span>
         </div>
       </div>

@@ -33,12 +33,12 @@ export default async function Contacts({ searchParams }: { searchParams: Promise
     <div className="grid gap-4">
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Contacts</h1>
-        {ctx.perms.has("crm.export") && <a className="btn btn-ghost" href={`/api/contacts/export?${exportQs}`}>⬇ Export CSV</a>}
+        {ctx.perms.has("crm.export") && <a className="btn btn-ghost" href={`/api/contacts/export?${exportQs}`}>Export CSV</a>}
       </header>
       {lists.length > 0 && (
         <nav aria-label="Saved lists" className="flex flex-wrap gap-2">
           <Link href="/app/contacts" className={`btn ${!active ? "btn-primary" : "btn-ghost"}`}>All contacts</Link>
-          {lists.map((l) => <span key={l.id} className="inline-flex gap-1"><Link href={`/app/contacts?list=${l.id}`} className={`btn ${active?.id === l.id ? "btn-primary" : "btn-ghost"}`}>📋 {l.name}</Link><ActionButton url={`/api/lists/${l.id}`} method="DELETE" label="✕" confirm={`Delete list "${l.name}"?`} /></span>)}
+          {lists.map((l) => <span key={l.id} className="inline-flex gap-1"><Link href={`/app/contacts?list=${l.id}`} className={`btn ${active?.id === l.id ? "btn-primary" : "btn-ghost"}`}>{l.name}</Link><ActionButton url={`/api/lists/${l.id}`} method="DELETE" label="✕" confirm={`Delete list "${l.name}"?`} /></span>)}
         </nav>
       )}
       {!active && (
@@ -80,7 +80,7 @@ export default async function Contacts({ searchParams }: { searchParams: Promise
           <span>{total} contacts · page {page} of {Math.max(1, Math.ceil(total / PAGE_SIZE))}</span>
           <span className="flex gap-2">
             {page > 1 && <Link className="btn btn-ghost" href={qs({ page: String(page - 1) })}>← Previous</Link>}
-            {page * PAGE_SIZE < total && <Link className="btn btn-ghost" href={qs({ page: String(page + 1) })}>Next →</Link>}
+            {page * PAGE_SIZE < total && <Link className="btn btn-ghost" href={qs({ page: String(page + 1) })}>Next</Link>}
           </span>
         </div>
       </div>
@@ -98,7 +98,7 @@ export default async function Contacts({ searchParams }: { searchParams: Promise
           </Card>
           <Card title="New company">
             <ApiForm action="/api/companies" submitLabel="Create company" success="Company created." reset fields={[{ name: "name", label: "Company name", required: true }, { name: "domain", label: "Website" }]} />
-            <ul className="mt-3 grid gap-1 text-sm">{companies.map((c) => <li key={c.id}>🏢 {c.name}</li>)}</ul>
+            <ul className="mt-3 grid gap-1 text-sm">{companies.map((c) => <li key={c.id}>{c.name}</li>)}</ul>
           </Card>
         </div>
       )}

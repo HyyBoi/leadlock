@@ -26,7 +26,7 @@ export default async function Inbox() {
           <li key={r.conv.id} className="card flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0">
               <Link className="link font-semibold" href={`/app/contacts/${r.contact.id}#conversation`}>{r.contact.name}</Link>
-              <p className="truncate text-sm">{lastMsgs[i]?.direction === "IN" ? "💬 " : "↩ "}{lastMsgs[i]?.body}</p>
+              <p className="truncate text-sm">{lastMsgs[i]?.direction === "IN" ? "" : ""}{lastMsgs[i]?.body}</p>
             </div>
             <div className="text-right text-xs text-[var(--muted)]">{ago(r.conv.lastMessageAt)}<br />Assigned: {members.find((m) => m.id === r.contact.ownerId)?.name ?? "—"}</div>
           </li>
